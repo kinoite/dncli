@@ -1,0 +1,15 @@
+# Cargo.toml
+
+[package]
+name = "dncli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.11", features = ["derive"] }
+reqwest = { version = "0.12.5", features = ["stream", "json", "native-tls"] }
+tokio = { version = "1.38.0", features = ["full"] }
+indicatif = "0.17" # Changed from "0.18.0" to "0.17"
+url = "2.5.0"
+futures-util = "0.3.30"
+
