@@ -57,7 +57,7 @@ for example:
 dncli -u https://rustacean.net/assets/cuddlyferris.png
 ```
 
-It'll install in the speed of light!, 
+It'll download in the speed of light!, 
 or- somewhere close, just see for yourself, fellow user!-
 
 ## WHAT SYSTEM DOES THIS WORK ON??!??!?
