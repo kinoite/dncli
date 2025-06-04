@@ -3,11 +3,11 @@
 use crate::output::FileInfo;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{Client, StatusCode};
-use std::fs::File;
-use std::io::{self, Seek, SeekFrom, Write};
+use tokio::fs::File; // Changed from std::fs::File
+use tokio::io::{self, AsyncSeekExt, AsyncWriteExt, SeekFrom}; // Added AsyncSeekExt, AsyncWriteExt, SeekFrom
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc};
 use tokio::task;
 use futures_util::stream::StreamExt;
 
@@ -19,6 +19,7 @@ pub enum DncliError {
     Network(String),
     Other(String),
     Join(tokio::task::JoinError),
+    ChannelSendError(String),
 }
 
 impl From<reqwest::Error> for DncliError {
@@ -45,6 +46,11 @@ impl From<tokio::task::JoinError> for DncliError {
     }
 }
 
+struct ChunkData {
+    offset: u64,
+    bytes: bytes::Bytes,
+}
+
 impl std::fmt::Display for DncliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -54,6 +60,7 @@ impl std::fmt::Display for DncliError {
             DncliError::Network(msg) => write!(f, "Network error: {}", msg),
             DncliError::Other(msg) => write!(f, "Error: {}", msg),
             DncliError::Join(e) => write!(f, "Task join error: {}", e),
+            DncliError::ChannelSendError(msg) => write!(f, "Channel send error: {}", msg),
         }
     }
 }
@@ -106,7 +113,7 @@ async fn download_single_thread(
     let client = Client::new();
     let mut response = client.get(url).send().await?.error_for_status()?;
 
-    let file = Arc::new(Mutex::new(File::create(output_path)?));
+    let file = Arc::new(Mutex::new(File::create(output_path).await?)); // Changed to tokio::fs::File::create().await?
 
     let pb = ProgressBar::new(file_info.total_size);
     pb.set_style(ProgressStyle::default_bar()
@@ -117,7 +124,7 @@ async fn download_single_thread(
     let mut downloaded_bytes = 0;
     while let Some(chunk) = response.chunk().await? {
         let mut file_guard = file.lock().await;
-        file_guard.write_all(&chunk)?;
+        file_guard.write_all(&chunk).await?; // Changed to .await?
         downloaded_bytes += chunk.len() as u64;
         pb.set_position(downloaded_bytes);
     }
@@ -134,12 +141,28 @@ async fn download_multi_thread(
     file_info: &FileInfo,
 ) -> Result<(), DncliError> {
     let client = Arc::new(Client::new());
-    let file = Arc::new(Mutex::new(File::create(output_path)?));
+    let output_file = Arc::new(Mutex::new(File::create(output_path).await?)); // Changed to tokio::fs::File::create().await?
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
         .unwrap()
         .progress_chars("#>-"));
+        
+    let (sender, mut receiver) = mpsc::unbounded_channel::<ChunkData>();
+
+    let writer_file_handle = Arc::clone(&output_file);
+    let writer_pb = pb.clone();
+    let writer_task = task::spawn(async move {
+        let mut file_guard = writer_file_handle.lock().await;
+        while let Some(chunk_data) = receiver.recv().await {
+            file_guard.seek(SeekFrom::Start(chunk_data.offset)).await // Changed to .await
+                .map_err(|e| DncliError::Io(e))?;
+            file_guard.write_all(&chunk_data.bytes).await // Changed to .await
+                .map_err(|e| DncliError::Io(e))?;
+            writer_pb.inc(chunk_data.bytes.len() as u64);
+        }
+        Ok::<(), DncliError>(())
+    });
 
     let chunk_size = total_size / connections as u64;
     let mut handles = vec![];
@@ -153,9 +176,8 @@ async fn download_multi_thread(
         };
 
         let client = Arc::clone(&client);
-        let file = Arc::clone(&file);
         let url = url.to_string();
-        let pb = pb.clone();
+        let sender_clone = sender.clone();
 
         let handle = task::spawn(async move {
             let mut current_start = start;
@@ -178,11 +200,13 @@ async fn download_multi_thread(
                             while let Some(chunk_result) = stream.next().await {
                                 match chunk_result {
                                     Ok(chunk) => {
-                                        let mut file_guard = file.lock().await;
-                                        file_guard.seek(SeekFrom::Start(current_start + downloaded_in_chunk))?;
-                                        file_guard.write_all(&chunk)?;
-                                        downloaded_in_chunk += chunk.len() as u64;
-                                        pb.inc(chunk.len() as u64);
+                                        let chunk_len = chunk.len() as u64;
+                                        sender_clone.send(ChunkData {
+                                            offset: current_start + downloaded_in_chunk,
+                                            bytes: chunk,
+                                        }).map_err(|e| DncliError::ChannelSendError(e.to_string()))?;
+
+                                        downloaded_in_chunk += chunk_len;
                                     }
                                     Err(e) => {
                                         eprintln!("Error downloading chunk in segment {}-{}: {}", start, end, e);
@@ -224,7 +248,9 @@ async fn download_multi_thread(
         handle.await??;
     }
 
+    drop(sender);
+    writer_task.await??;
+
     pb.finish_with_message("Download complete!");
     Ok(())
 }
-
