@@ -3,8 +3,8 @@
 use crate::output::FileInfo;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{Client, StatusCode};
-use tokio::fs::File; // Changed from std::fs::File
-use tokio::io::{self, AsyncSeekExt, AsyncWriteExt, SeekFrom}; // Added AsyncSeekExt, AsyncWriteExt, SeekFrom
+use tokio::fs::File;
+use tokio::io::{self, AsyncSeekExt, AsyncWriteExt, SeekFrom};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
@@ -113,7 +113,7 @@ async fn download_single_thread(
     let client = Client::new();
     let mut response = client.get(url).send().await?.error_for_status()?;
 
-    let file = Arc::new(Mutex::new(File::create(output_path).await?)); // Changed to tokio::fs::File::create().await?
+    let file = Arc::new(Mutex::new(File::create(output_path).await?));
 
     let pb = ProgressBar::new(file_info.total_size);
     pb.set_style(ProgressStyle::default_bar()
@@ -124,7 +124,7 @@ async fn download_single_thread(
     let mut downloaded_bytes = 0;
     while let Some(chunk) = response.chunk().await? {
         let mut file_guard = file.lock().await;
-        file_guard.write_all(&chunk).await?; // Changed to .await?
+        file_guard.write_all(&chunk).await?;
         downloaded_bytes += chunk.len() as u64;
         pb.set_position(downloaded_bytes);
     }
@@ -141,7 +141,7 @@ async fn download_multi_thread(
     file_info: &FileInfo,
 ) -> Result<(), DncliError> {
     let client = Arc::new(Client::new());
-    let output_file = Arc::new(Mutex::new(File::create(output_path).await?)); // Changed to tokio::fs::File::create().await?
+    let output_file = Arc::new(Mutex::new(File::create(output_path).await?));
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
@@ -155,9 +155,9 @@ async fn download_multi_thread(
     let writer_task = task::spawn(async move {
         let mut file_guard = writer_file_handle.lock().await;
         while let Some(chunk_data) = receiver.recv().await {
-            file_guard.seek(SeekFrom::Start(chunk_data.offset)).await // Changed to .await
+            file_guard.seek(SeekFrom::Start(chunk_data.offset)).await
                 .map_err(|e| DncliError::Io(e))?;
-            file_guard.write_all(&chunk_data.bytes).await // Changed to .await
+            file_guard.write_all(&chunk_data.bytes).await
                 .map_err(|e| DncliError::Io(e))?;
             writer_pb.inc(chunk_data.bytes.len() as u64);
         }
