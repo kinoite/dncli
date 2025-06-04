@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(PathBuf::from);
 
         filename_from_url.unwrap_or(args.output)
-    } else 
+    } else {
         args.output
     };
 
