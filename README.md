@@ -1,4 +1,4 @@
-> [!CAUTION]
+> [!WARNING]
 > ``dncli`` is still in alpha, expect bugs, errors, or anything.
 
 # dncli
