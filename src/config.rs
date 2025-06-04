@@ -1,17 +1,21 @@
-// config.rs
+// src/config.rs
 
 use serde::{Serialize, Deserialize};
 use confy::{ConfyError, load, store};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DncliConfig {
-    pub throttle_limit_kbps: Option<u64>,
+    pub hide_progress_bar: bool,
+    pub progress_template: Option<String>,
+    pub show_download_speed: bool,
 }
 
 impl Default for DncliConfig {
     fn default() -> Self {
         DncliConfig {
-            throttle_limit_kbps: None,
+            hide_progress_bar: false,
+            progress_template: None,
+            show_download_speed: true,
         }
     }
 }
