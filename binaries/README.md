@@ -1,5 +1,5 @@
 > [!CAUTION]
-> Theese dncli binaries are only for x86_64, if your CPU architecture isnt x86_64, DO NOT USE THEESE.
+> These dncli binaries are only for x86_64, if your CPU architecture isnt x86_64, DO NOT USE THESE.
 
 > [!NOTE]
 > More binaries for architectures for future releases will be made soon.
