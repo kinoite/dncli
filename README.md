@@ -6,9 +6,7 @@ dncli ("**d**ow**n**load **cli**ent") is a download client, like wget, written i
 
 ![Logo of dncli (looks shit ik)](/images/Untitled4_20250608210312.png)
 ![enbyware](https://pride-badges.pony.workers.dev/static/v1?label=enbyware&labelColor=%23555&stripeWidth=8&stripeColors=FCF434%2CFFFFFF%2C9C59D1%2C2C2C2C)
-![GitHub Issues or Pull Requests by label](https://img.shields.io/codeberg/issues/kinoite/dncli)
-![language count](https://img.shields.io/codeberg/languages/count/kinoite/dncli)
-![repo size](https://img.shields.io/codeberg/kinoite/dncli)
+![RUST, ITS MEMORY SAFE, MEMORY SAFETY GUYS!N!1!1!1 MEMORY SAFETY IS PRIORITY!!1!1!1!](https://shields.io/badge/-Rust-3776AB?style=flat&logo=rust)
 
 
 The aim of dncli is to be more 
