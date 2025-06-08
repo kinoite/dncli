@@ -5,7 +5,7 @@
 dncli ("**d**ow**n**load **cli**ent") is a download client, like wget, written in Rust.
 
 ![Logo of dncli (looks shit ik)](/images/Untitled4_20250608210312.png)
-
+![enbyware (ENBYYYYY NONBINARY RAHHHHHHGUFHFHFHFHFHFGGHFHG kinoite is non-binary btw)]()
 The aim of dncli is to be more 
 performant, faster and reliable, 
 Unlike wget, it still relies on Rust 
