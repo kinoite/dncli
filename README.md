@@ -21,14 +21,10 @@ dependencies soon enough (no offence).
 ## Erm... how do I install this..?
 
 Good question little user!, you first 
-clone this Github repository with ``git`` or ``gh`` with:
+clone this Github repository with ``git`` with:
 
 ```
 git clone https://github.com/kinoite/dncli.git
-```
-or:
-```
-gh repo clone kinoite/dncli
 ```
 
 After that, go into the cloned repository, then run:
