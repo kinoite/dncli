@@ -61,6 +61,14 @@ dncli -u https://rustacean.net/assets/cuddlyferris.png
 It'll download in the speed of light!, 
 or- somewhere close, just see for yourself, fellow user!-
 
+# Planned features
+- [] Torrent and magnet handling (possibly a client)
+- [x] Configuration
+- [] Bandwidth throttling
+- [] MIME guessing (so downloaded files sometimes dont download as "output.bin")
+- [] More speed (RAAAAHHHHHHHHGHHHHG)
+- [] More efficiency
+
 ## WHAT SYSTEM DOES THIS WORK ON??!??!?
 Woah... calm down buckaroo, not sure 
 why you're this despera- ANYWAYS!
