@@ -6,10 +6,9 @@ dncli ("**d**ow**n**load **cli**ent") is a download client, like wget, written i
 
 ![Logo of dncli (looks shit ik)](/images/Untitled4_20250608210312.png)
 ![enbyware](https://pride-badges.pony.workers.dev/static/v1?label=enbyware&labelColor=%23555&stripeWidth=8&stripeColors=FCF434%2CFFFFFF%2C9C59D1%2C2C2C2C)
-![GitHub Issues or Pull Requests by label](https://img.shields.io/github/issues/TecharoHQ/anubis)
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/TecharoHQ/anubis)
-![language count](https://img.shields.io/github/languages/count/TecharoHQ/anubis)
-![repo size](https://img.shields.io/github/repo-size/TecharoHQ/anubis)
+![GitHub Issues or Pull Requests by label](https://img.shields.io/codeberg/issues/kinoite/dncli)
+![language count](https://img.shields.io/codeberg/languages/count/kinoite/dncli)
+![repo size](https://img.shields.io/codeberg/kinoite/dncli)
 
 
 The aim of dncli is to be more 
