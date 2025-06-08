@@ -24,7 +24,7 @@ Good question little user!, you first
 clone this Github repository with ``git`` with:
 
 ```
-git clone https://github.com/kinoite/dncli.git
+git clone https://codeberg.org/kinoite/dncli.git
 ```
 
 After that, go into the cloned repository, then run:
