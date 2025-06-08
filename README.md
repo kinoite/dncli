@@ -5,7 +5,13 @@
 dncli ("**d**ow**n**load **cli**ent") is a download client, like wget, written in Rust.
 
 ![Logo of dncli (looks shit ik)](/images/Untitled4_20250608210312.png)
-![enbyware (ENBYYYYY NONBINARY RAHHHHHHGUFHFHFHFHFHFGGHFHG kinoite is non-binary btw)](https://camo.githubusercontent.com/bee100e0a2439d329fd52512a3acd1b4df3adf924e315507c5433d68ab79ab95/68747470733a2f2f70726964652d6261646765732e706f6e792e776f726b6572732e6465762f7374617469632f76313f6c6162656c3d656e627977617265266c6162656c436f6c6f723d2532333535352673747269706557696474683d3826737472697065436f6c6f72733d464346343334253243464646464646253243394335394431253243324332433243)
+![enbyware](https://pride-badges.pony.workers.dev/static/v1?label=enbyware&labelColor=%23555&stripeWidth=8&stripeColors=FCF434%2CFFFFFF%2C9C59D1%2C2C2C2C)
+![GitHub Issues or Pull Requests by label](https://img.shields.io/github/issues/TecharoHQ/anubis)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/TecharoHQ/anubis)
+![language count](https://img.shields.io/github/languages/count/TecharoHQ/anubis)
+![repo size](https://img.shields.io/github/repo-size/TecharoHQ/anubis)
+
+
 The aim of dncli is to be more 
 performant, faster and reliable, 
 Unlike wget, it still relies on Rust 
