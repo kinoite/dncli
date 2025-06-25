@@ -1,9 +1,7 @@
-// src/dncli.rs
-
 use crate::output::{FileInfo, DownloadOptions};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{Client, StatusCode};
-use tokio::fs::File;
+use tokio::fs::{self, File, OpenOptions};
 use tokio::io::{self, AsyncSeekExt, AsyncWriteExt};
 use std::path::{Path, PathBuf}; 
 use std::sync::Arc;
@@ -68,13 +66,21 @@ impl std::fmt::Display for DncliError {
 impl std::error::Error for DncliError {}
 
 pub async fn download_file(
+    client: Arc<Client>,
     url: String,
     output_path: PathBuf,
     connections: usize,
     options: DownloadOptions,
 ) -> Result<FileInfo, DncliError> {
-    let client = Client::new();
     let _parsed_url = url::Url::parse(&url)?;
+
+    let mut downloaded_so_far = 0;
+    if output_path.exists() {
+        if let Ok(metadata) = fs::metadata(&output_path).await {
+            downloaded_so_far = metadata.len();
+            println!("Resuming download from byte {} for {}", downloaded_so_far, output_path.display());
+        }
+    }
 
     let response = client.head(&url).send().await?.error_for_status()?;
     let total_size = response
@@ -83,6 +89,22 @@ pub async fn download_file(
         .and_then(|h| h.to_str().ok())
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(0);
+
+    if total_size == 0 && downloaded_so_far > 0 {
+        eprintln!("Warning: Server does not provide Content-Length. Cannot reliably resume download. Starting from scratch.");
+        downloaded_so_far = 0;
+    } else if total_size > 0 && downloaded_so_far > total_size {
+        eprintln!("Warning: Local file is larger than remote. Starting from scratch.");
+        downloaded_so_far = 0;
+    } else if total_size > 0 && downloaded_so_far == total_size {
+        println!("File already downloaded: {}", output_path.display());
+        return Ok(FileInfo {
+            url: url.to_string(),
+            file_name: output_path.file_name().and_then(|s| s.to_str()).unwrap_or("unknown").to_string(),
+            total_size,
+        });
+    }
+
 
     let accepts_ranges = response.headers().contains_key("accept-ranges");
 
@@ -97,30 +119,43 @@ pub async fn download_file(
     };
 
     if !accepts_ranges || total_size == 0 || connections == 1 {
-        println!("Server does not support byte-range requests or single connection requested. Falling back to single-threaded download.");
-        download_single_thread(url, output_path, &file_info, options).await?;
+        println!("Server does not support byte-range requests or single connection requested. Fallback to single-threaded download.");
+        download_single_thread(client, url, output_path, &file_info, options, downloaded_so_far).await?;
     } else {
-        download_multi_thread(url, output_path, total_size, connections, &file_info, options).await?;
+        download_multi_thread(client, url, output_path, total_size, connections, &file_info, options, downloaded_so_far).await?;
     }
 
     Ok(file_info)
 }
 
 async fn download_single_thread(
+    client: Arc<Client>,
     url: String,
     output_path: PathBuf,
     _file_info: &FileInfo,
     options: DownloadOptions,
+    downloaded_so_far: u64,
 ) -> Result<(), DncliError> {
-    let client = Client::new();
-    let mut response = client.get(&url).send().await?.error_for_status()?;
+    let mut request_builder = client.get(&url);
+    if downloaded_so_far > 0 {
+        request_builder = request_builder.header("Range", format!("bytes={}-", downloaded_so_far));
+    }
+    let mut response = request_builder.send().await?.error_for_status()?;
 
-    let file = Arc::new(Mutex::new(File::create(&output_path).await?));
+    let file = Arc::new(Mutex::new(
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(downloaded_so_far > 0)
+            .open(&output_path)
+            .await?
+    ));
 
     let pb = if options.hide_progress {
         ProgressBar::hidden()
     } else {
         let bar = ProgressBar::new(_file_info.total_size);
+        bar.set_position(downloaded_so_far);
         let template_str = if let Some(custom_template) = options.progress_template {
             custom_template.to_string()
         } else if options.show_download_speed {
@@ -132,12 +167,12 @@ async fn download_single_thread(
         bar
     };
 
-    let mut downloaded_bytes = 0;
+    let mut newly_downloaded_bytes = 0; 
     while let Some(chunk) = response.chunk().await? {
         let mut file_guard = file.lock().await;
         file_guard.write_all(&chunk).await?;
-        downloaded_bytes += chunk.len() as u64;
-        pb.set_position(downloaded_bytes);
+        newly_downloaded_bytes += chunk.len() as u64;
+        pb.set_position(downloaded_so_far + newly_downloaded_bytes);
     }
     pb.finish_with_message("Download complete!");
 
@@ -145,20 +180,22 @@ async fn download_single_thread(
 }
 
 async fn download_multi_thread(
+    client: Arc<Client>,
     url: String,
     output_path: PathBuf,
     total_size: u64,
     connections: usize,
     _file_info: &FileInfo,
     options: DownloadOptions,
+    downloaded_so_far: u64,
 ) -> Result<(), DncliError> {
-    let client = Arc::new(Client::new());
     let output_file = Arc::new(Mutex::new(File::create(&output_path).await?)); 
     
     let pb = if options.hide_progress {
         ProgressBar::hidden()
     } else {
         let bar = ProgressBar::new(total_size);
+        bar.set_position(downloaded_so_far);
         let template_str = if let Some(custom_template) = options.progress_template {
             custom_template.to_string()
         } else if options.show_download_speed {
@@ -181,7 +218,6 @@ async fn download_multi_thread(
                 .map_err(|e| DncliError::Io(e))?;
             file_guard.write_all(&chunk_data.bytes).await
                 .map_err(|e| DncliError::Io(e))?;
-            writer_pb.inc(chunk_data.bytes.len() as u64);
         }
         Ok::<(), DncliError>(())
     });
@@ -197,24 +233,26 @@ async fn download_multi_thread(
             start + chunk_size.saturating_sub(1)
         };
 
+        let actual_start_byte = start; 
+
         let client = Arc::clone(&client);
-        let url_clone = url.clone(); // Clone the owned String for each task
+        let url_clone = url.clone();
         let sender_clone = sender.clone();
+        let pb_clone = pb.clone();
 
         let handle = tokio::task::spawn(async move {
-            let mut current_start = start;
+            let mut current_start = actual_start_byte;
             let max_retries = 5;
             let mut retries = 0;
 
             loop {
-                // Start building the request
+                let range_header = format!("bytes={}-{}", current_start, end);
                 let mut request_builder = client.get(&url_clone); 
                 
                 if end > 0 {
-                    request_builder = request_builder.header("Range", format!("bytes={}-{}", current_start, end));
+                    request_builder = request_builder.header("Range", range_header.clone());
                 }
 
-                // Build the request and send it
                 match request_builder.send().await {
                     Ok(response) => {
                         if response.status() == StatusCode::PARTIAL_CONTENT || response.status() == StatusCode::OK {
@@ -231,6 +269,7 @@ async fn download_multi_thread(
                                         }).map_err(|e| DncliError::ChannelSendError(e.to_string()))?;
 
                                         downloaded_in_chunk += chunk_len;
+                                        pb_clone.inc(chunk_len);
                                     }
                                     Err(e) => {
                                         eprintln!("Error downloading chunk in segment {}-{}: {}", start, end, e);
