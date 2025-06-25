@@ -1,6 +1,9 @@
 > [!WARNING]
 > ``dncli`` is still in alpha, expect bugs, errors, or anything.
 
+> [!CAUTION]
+> the ``--scrape`` flag and feature is unstable and broken at the moment, i'll try to fix it later, sorry!
+
 # dncli
 dncli ("**d**ow**n**load **cli**ent") is a download client, like wget, written in Rust.
 
