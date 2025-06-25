@@ -68,7 +68,7 @@ or- somewhere close, just see for yourself, fellow user!-
 - [ ] Torrent and magnet handling (possibly a client)
 - [x] Configuration
 - [ ] Bandwidth throttling
-- [ ] MIME guessing (so downloaded files sometimes dont download as "output.bin")
+- [x] MIME guessing (so downloaded files sometimes dont download as "output.bin")
 - [ ] More speed (RAAAAHHHHHHHHGHHHHG)
 - [ ] More efficiency
 
